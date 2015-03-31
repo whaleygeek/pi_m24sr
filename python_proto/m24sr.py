@@ -2,7 +2,7 @@
 #
 # Driver wrapper around I2C to access the M24SR device
 
-import ci2c as I2C
+#import ci2c as I2C
 
 # DOCUMENTATION
 #
@@ -19,12 +19,12 @@ import ci2c as I2C
 #   I2C pins:    SDA=2 SCL=3 (Pi B Rev 2)
 #   I2C address: 0b1010 110x (8bit 0xAC(r) 0xAD(w)) (7bit 0x56)
 
-I2C_ADDRESS = 0xAC
 
 # File identifiers
 #   0xE101 System file
 #   0xE103 CC file (card configuration)
 #   0x0001 NDEF file
+
 
 # SYSTEM FILE LAYOUT (useful to try to read out some known values at start)
 #   0000+2 Length of system file   0x0012
@@ -41,14 +41,30 @@ I2C_ADDRESS = 0xAC
 
 
 class NFCTag():
-    def __init__(self, i2c):
-        pass
+    I2C_ADDRESS = 0xAC
+    SYSTEM = 0xE101
+    CC     = 0xE103
+    NDEF   = 0x0001
 
-    # commands required (based on Table 4 in AN4433) for NFC read
-    # killRFSelectI2C()
-    # selectFile(fileNumber)
-    # readBinary(offset, length)
-    # deselect()
+    def __init__(self, i2c):
+        self.i2c = i2c
+        self.addr = self.I2C_ADDRESS
+
+
+    def killRFSelectI2C(self):
+        pass # TODO
+
+
+    def selectFile(self, fileId):
+        pass # TODO
+
+
+    def readBinary(self, offset, length):
+        return 0x55AA # TODO
+
+
+    def deselect(self):
+        pass # TODO
 
 
 
@@ -80,4 +96,5 @@ class NFCTag():
 #   and the register content shall not be inverted after calculation.
 
 
+# END
 
