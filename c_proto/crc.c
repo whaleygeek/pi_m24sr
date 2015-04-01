@@ -45,10 +45,9 @@ BYTE *TransmitFirst, BYTE *TransmitSecond)
   }
   *TransmitFirst = (BYTE) (wCrc & 0xFF);
   *TransmitSecond = (BYTE) ((wCrc >> 8) & 0xFF);
-  return;
 }
 
-BYTE BuffCRC_A[10] = {0x12, 0x34};
+BYTE BuffCRC_A[10] = {0xC2};
 BYTE BuffCRC_B[10] = {0x0A, 0x12, 0x34, 0x56};
 unsigned short Crc;
 BYTE First, Second;
@@ -60,11 +59,11 @@ int main(void)
   printf("CRC-16 reference results ISO/IEC 14443-3\n");
   printf("Crc-16 G(x) = x^16 + x^12 + x^5 + 1\n\n");
   printf("CRC_A of [ ");
-  for(i=0; i<2; i++)
+  for(i=0; i<1; i++)
   {
     printf("%02X ",BuffCRC_A[i]);
   }
-  ComputeCrc(CRC_A, BuffCRC_A, 2, &First, &Second);
+  ComputeCrc(CRC_A, BuffCRC_A, 1, &First, &Second);
 
   printf("] Transmitted: %02X then %02X.\n", First, Second);
   printf("CRC_B of [ ");
