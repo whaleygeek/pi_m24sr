@@ -25,11 +25,13 @@ WORD ComputeCrc(BYTE *data, unsigned int len, BYTE *crc0, BYTE *crc1)
   WORD wCrc;
 
   wCrc = 0x6363;
+  //printf("fcs %04X:\n", (unsigned int)wCrc);
 
   do
   {
     bBlock = *data++;
     UpdateCrc(bBlock, &wCrc);
+    //printf("update(%02X) fcs:%04X\n", (unsigned int)bBlock, (unsigned int)wCrc);
   }
   while (--len);
 
