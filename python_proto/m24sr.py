@@ -91,9 +91,20 @@ class NFCTag():
 
 # CRC CALCULATION
 #   calcululate, check
-#   ISO/IEC 13239.
-#   The initial register content shall be 0x6363
-#   and the register content shall not be inverted after calculation.
+#
+# For the I2C frames, the CRC is computed on all data bits of the frame excluding Device select and the CRC itself.
+# The CRC is as defined in ISO/IEC 13239.
+# The initial register content shall be 0x6363
+# and the register content shall not be inverted after calculation.
+
+# worked example of CRC calculation (http://codepad.org/vf3r1EmJ)
+# frame: 0xAC 0xC2
+# initial FCS: 0x6363
+
+# final FCS: 0xE0B4
+
+
+
 
 
 # END
