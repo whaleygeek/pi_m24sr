@@ -97,15 +97,6 @@ class NFCTag():
 # The initial register content shall be 0x6363
 # and the register content shall not be inverted after calculation.
 
-# worked example of CRC calculation (http://codepad.org/vf3r1EmJ)
-# frame: 0xAC 0xC2
-# initial FCS: 0x6363
-
-# final FCS: 0xE0B4
-
-
-
-
 
 # END
 
