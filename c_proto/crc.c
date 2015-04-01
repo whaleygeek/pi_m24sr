@@ -8,14 +8,14 @@
 typedef unsigned char BYTE;
 typedef unsigned short WORD;
 
-WORD UpdateCrc(BYTE ch, WORD *pwCrc)
+WORD UpdateCrc(BYTE data, WORD *pwCrc)
 {
-  ch = (ch^(BYTE)((*pwCrc) & 0x00FF));
-  ch = (ch^(ch<<4));
+  data = (data^(BYTE)((*pwCrc) & 0x00FF));
+  data = (data^(data << 4));
   *pwCrc = (*pwCrc >> 8) 
-         ^ ((WORD)ch << 8) 
-         ^ ((WORD)ch<<3) 
-         ^ ((WORD)ch>>4);
+         ^ ((WORD)data << 8) 
+         ^ ((WORD)data << 3) 
+         ^ ((WORD)data >> 4);
   return *pwCrc;
 }
 
