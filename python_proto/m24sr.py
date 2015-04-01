@@ -46,65 +46,77 @@ def byte1(b):
 
 
 class NFCTag():
-    I2C_ADDRESS = 0xAC
+    I2C_ADDRESS_7BIT = 0x56
     SYSTEM = 0xE101
     CC     = 0xE103
     NDEF   = 0x0001
 
     def __init__(self, i2c):
         self.i2c = i2c
-        self.addr = self.I2C_ADDRESS
+        self.addr = self.I2C_ADDRESS_7BIT
 
 
     def write(self, data, crc=False):
-        # scaffolding while testing
-        # start, address+rw, stop handled by I2C
-
+        """Write a string of data bytes, with optional CRC"""
         if crc:
             crc0, crc1 = CRC.compute(data)
             data.append(crc0)
             data.append(crc1)
+            #print("appending crc:" + hex(crc0) + " " + hex(crc1))
 
         data_hex = ""
         for i in range(len(data)):
             data_hex += hex(data[i]) + " "
 
         print("i2c write: [AC] " + data_hex)
+        self.i2c.write(self.addr, data)
 
 
     def read(self, len, checkCrc=False):
-        # scaffolding while testing
-        # start, address+rw, stop handled by I2C
-        result = []
-        for i in range(len):
-            result.append(0xFE)
+        """read a string of data bytes, with optional CRC checking"""
+        result = self.i2c.read(self.addr, len)
+        if checkCrc:
+            raise RuntimeError("CRC checking not yet written")
         return result
 
 
     def killRFSelectI2C(self):
+        """Kill off any RF session and open an I2C session"""
         # tx:  [0xAC]  0x52
         # rx: TODO
         self.write([0x52])
-        result = self.read(0)
 
 
-    def selectFile(self, fileId):
-        # tx:  [0xAC]  0x02    0x00    0xA4  0x00   0x0c   0x02   (0xE101)        0xCCCC
+    def selectNFCT4Application(self, pcb=0x02):
+        """Select the NFC app"""
+        # tx: [0xAC] 0x02 0x00 0xA4 0x04 0x00 0x07 0xD2 0x76 0x00 0x00 0x85 0x01 0x01 0x00 [0x35 0xC0]
+        # rx: [0xAD] 0x02 0x90 0x00 [0xF1 0x09]
+        self.write([pcb,0x00,0xA4,0x04,0x00,0x07,0xD2,0x76,0x00,0x00,0x85,0x01,0x01,0x00], crc=True)
+        result = self.read(3)
+        return result
+
+
+    def selectFile(self, fileId, pcb=0x02):
+        """Select a nominated file"""
+        # tx:  [0xAC]  0x03    0x00    0xA4  0x00   0x0c   0x02   (0xE101)        0xCCCC
         # rx: TODO
-        self.write([0x02, 0x00, 0xA4, 0x00, 0x0C, 0x02, byte0(fileId), byte1(fileId)], crc=True)
-        result = self.read(0)
+        self.write([pcb, 0x00, 0xA4, 0x00, 0x0C, 0x02, byte1(fileId), byte0(fileId)], crc=True)
+        result = self.read(3)
+        return result
 
 
-    def readBinary(self, offset, length):
+    def readBinary(self, offset, length, pcb=0x02):
+        """Read binary from the currently selected file"""
         # read length
-        # tx: [0xAC]  0x03    0x00    0xB0  (0x00   0x00)                   (0x02) 0xCCCC
+        # tx: [0xAD]  0x03    0x00    0xB0  (0x00   0x00)                   (0x02) 0xCCCC
         # rx: TODO
-        self.write([0x03, 0x00, 0xB0, byte0(offset), byte1(offset), byte0(length)], crc=True)
+        self.write([pcb, 0x00, 0xB0, byte1(offset), byte0(offset), byte0(length)], crc=True)
         result = self.read(length)
         return result
 
 
     def deselect(self):
+        """Deselect the I2C (allow RF to come in again)"""
         # deselect
         # tx: [0xAC]  0xC2                                                     0xE0 B4
         # rx: TODO
@@ -115,8 +127,13 @@ class NFCTag():
 
 # PCB means "protocol control byte",
 # It's either 0x02 or 0x03, specifies format of the payload, flags to select different bits
-# 0x02 is to send a command (Lc+Data)
-# 0x03 is to read a location (Le)
+# 0x02/0x03 is to send a command or data
+# bit 0 (0x02 or 0x03) is used for A/B block detection
+# i.e. to prevent message repeat errors, it's like a 1 bit sequence number
+# It should alternate between 0x02 and 0x03
+# The slave toggles bit0 on every message, and so should we.
+# This helps to detect if messages have got out of sync, e.g. a lost message
+# We don't do pcb validation in this code at the moment, but will do later.
 
 # CLA is class byte (always 0x00 for these apps)
 # P1 P2 are parameter 1 and 2,
@@ -129,8 +146,8 @@ class NFCTag():
 #                                     SEL   PCB     CLA     INS   P1     P2     Lc     Data     Le   CRC2
 #   kill RF session, open I2C         0xAC  0x52
 #   select system file                0xAC  0x02    0x00    0xA4  0x00   0x0c   0x02   0xE101        0xCCCC
-#   read length                       0xAC  0x03    0x00    0xB0  0x00   0x00                   0x02 0xCCCC
-#   read memsize                      0xAC  0x03    0x00    0xB0  0x00   0x0F                   0x02 0xCCCC
+#   read length                       0xAD  0x03    0x00    0xB0  0x00   0x00                   0x02 0xCCCC
+#   read memsize                      0xAD  0x03    0x00    0xB0  0x00   0x0F                   0x02 0xCCCC
 #   deselect                          0xAC  0xC2                                                     0xE0 B4
 
 
@@ -282,39 +299,54 @@ def wait(msg):
     raw_input(msg)
 
 
-def test_bus():
-    wait("create tag object")
-    tag = NFCTag(None)
+def test_AN4433seq():
+    import ci2c as i2c
+
+    tag = NFCTag(i2c)
 
     # READ MEMORY SIZE REGISTER FROM SYSTEM FILE
 
     # kill off any RF session, and open an I2C session, claiming the token.
-    wait("select I2C")
+    print("select I2C")
     tag.killRFSelectI2C()
 
-    # Select the SYSTEM INFO file
-    wait("select system file")
-    tag.selectFile(tag.SYSTEM)
+    # select NFC application
+    print("select NFC application")
+    tag.selectNFCT4Application(pcb=0x02)
 
-    # Read the length of the SYSTEM file (should be 0x0012)
-    wait("read system file length")
-    len = tag.readBinary(0x00, 0x02)
-    print("len:" + str(len))
+    # Select the CC file
+    print("select CC file")
+    tag.selectFile(tag.CC, pcb=0x03)
 
-    # Read the memory size field in the SYSTEM file (shoudl be 0x1FFF eeprom size)
-    wait("read eeprom size from system file")
-    memsize = tag.readBinary(0x000F, 0x02)
-    print("memsize:" + str(memsize))
+    # read CC file length
+    print("read CC file len")
+    tag.readBinary(0x0000, 0x02, pcb=0x02)
+
+    # read CC file
+    print("read CC file")
+    tag.readBinary(0x0000, 0x0F, pcb=0x03)
+
+    # select NDEF file
+    print("select NDEF file")
+    tag.selectFile(tag.NDEF, pcb=0x02)
+
+    # read NDEF message length
+    print("read NDEF message len")
+    tag.readBinary(0x0000, 0x02, pcb=0x03)
+
+    # read NDEF file
+    print("read NDEF message")
+    tag.readBinary(0x0002, 0x14, pcb=0x02)
 
     # Deselect the tag and release the token (RF can now use it)
-    wait("deselect")
+    print("deselect")
     tag.deselect()
 
 
 if __name__ == "__main__":
     #test_vectors()
-    while True:
-        test_bus()
+
+    test_AN4433seq()
 
 # END
 
