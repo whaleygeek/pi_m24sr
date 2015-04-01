@@ -296,11 +296,27 @@ CRC:0xe0 0xb4
 # NFC TAG INTERFACE TEST HARNESS ----------------------------------------------
 
 def wait(msg):
-    raw_input("\n" + str(msg))
+    print("\n" + str(msg))
 
 
 def test_AN4433seq():
     import ci2c as i2c
+
+    class DummyI2C():
+        def initDefaults(self):
+            pass
+
+        def write(self, addr, msg):
+            pass#print("write")
+
+        def read(self, addr, len):
+            pass#print("read")
+
+        def finished(self):
+            pass
+
+    #i2c = DummyI2C()
+
     i2c.initDefaults()
 
     tag = NFCTag(i2c)
