@@ -296,51 +296,58 @@ CRC:0xe0 0xb4
 # NFC TAG INTERFACE TEST HARNESS ----------------------------------------------
 
 def wait(msg):
-    raw_input(msg)
+    raw_input("\n" + str(msg))
 
 
 def test_AN4433seq():
     import ci2c as i2c
+    i2c.initDefaults()
 
     tag = NFCTag(i2c)
 
     # READ MEMORY SIZE REGISTER FROM SYSTEM FILE
 
     # kill off any RF session, and open an I2C session, claiming the token.
-    print("select I2C")
+    wait("select I2C")
     tag.killRFSelectI2C()
 
     # select NFC application
-    print("select NFC application")
+    wait("select NFC application")
     tag.selectNFCT4Application(pcb=0x02)
 
     # Select the CC file
-    print("select CC file")
+    wait("select CC file")
     tag.selectFile(tag.CC, pcb=0x03)
 
     # read CC file length
-    print("read CC file len")
-    tag.readBinary(0x0000, 0x02, pcb=0x02)
+    wait("read CC file len")
+    len = tag.readBinary(0x0000, 0x02, pcb=0x02)
+    print(str(len))
 
     # read CC file
-    print("read CC file")
-    tag.readBinary(0x0000, 0x0F, pcb=0x03)
+    wait("read CC file")
+    data = tag.readBinary(0x0000, 0x0F, pcb=0x03)
+    print(str(data))
 
     # select NDEF file
-    print("select NDEF file")
+    wait("select NDEF file")
     tag.selectFile(tag.NDEF, pcb=0x02)
 
     # read NDEF message length
-    print("read NDEF message len")
-    tag.readBinary(0x0000, 0x02, pcb=0x03)
+    wait("read NDEF message len")
+    len = tag.readBinary(0x0000, 0x02, pcb=0x03)
+    print(str(len))
 
     # read NDEF file
-    print("read NDEF message")
-    tag.readBinary(0x0002, 0x14, pcb=0x02)
+    wait("read NDEF message")
+    data = tag.readBinary(0x0002, 0x14, pcb=0x02)
+    print(str(data))
 
     # Deselect the tag and release the token (RF can now use it)
-    print("deselect")
+    wait("deselect")
     tag.deselect()
+
+    i2c.finished()
 
 
 if __name__ == "__main__":
