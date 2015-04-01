@@ -45,6 +45,14 @@ def byte1(b):
     return (b & 0xFF00) >> 8
 
 
+def tohex(buf):
+    sbuf = ""
+    for i in range(len(buf)):
+        print(str(i) + "=" + str(buf[i]))
+        sbuf += hex(buf[i]) + " "
+    return sbuf
+
+
 class NFCTag():
     I2C_ADDRESS_7BIT = 0x56
     SYSTEM = 0xE101
@@ -69,15 +77,21 @@ class NFCTag():
             data_hex += hex(data[i]) + " "
 
         print("i2c write: [AC] " + data_hex)
-        self.i2c.write(self.addr, data)
+        result = self.i2c.write(self.addr, data)
+        print("write:" + str(result))
+        if result != 0:
+            raise RuntimeError("write result:" + str(result))
 
 
     def read(self, len, checkCrc=False):
         """read a string of data bytes, with optional CRC checking"""
-        result = self.i2c.read(self.addr, len)
+        result, data = self.i2c.read(self.addr, len)
         if checkCrc:
             raise RuntimeError("CRC checking not yet written")
-        return result
+        print("read:" + str(result))
+        if result != 0:
+            raise RuntimeError("write result:" + str(result))
+        return data
 
 
     def killRFSelectI2C(self):
@@ -92,7 +106,7 @@ class NFCTag():
         # tx: [0xAC] 0x02 0x00 0xA4 0x04 0x00 0x07 0xD2 0x76 0x00 0x00 0x85 0x01 0x01 0x00 [0x35 0xC0]
         # rx: [0xAD] 0x02 0x90 0x00 [0xF1 0x09]
         self.write([pcb,0x00,0xA4,0x04,0x00,0x07,0xD2,0x76,0x00,0x00,0x85,0x01,0x01,0x00], crc=True)
-        result = self.read(3)
+        result = self.read(5)
         return result
 
 
@@ -101,7 +115,7 @@ class NFCTag():
         # tx:  [0xAC]  0x03    0x00    0xA4  0x00   0x0c   0x02   (0xE101)        0xCCCC
         # rx: TODO
         self.write([pcb, 0x00, 0xA4, 0x00, 0x0C, 0x02, byte1(fileId), byte0(fileId)], crc=True)
-        result = self.read(3)
+        result = self.read(5)
         return result
 
 
@@ -111,7 +125,8 @@ class NFCTag():
         # tx: [0xAD]  0x03    0x00    0xB0  (0x00   0x00)                   (0x02) 0xCCCC
         # rx: TODO
         self.write([pcb, 0x00, 0xB0, byte1(offset), byte0(offset), byte0(length)], crc=True)
-        result = self.read(length)
+        result = self.read(length+5)
+        print("readBinary:" + str(result))
         return result
 
 
@@ -200,9 +215,7 @@ class CRC():
 # CRC VECTOR TEST HARNESS -----------------------------------------------------
 
 def test(id, buf):
-    buf_hex = ""
-    for i in range(len(buf)):
-        buf_hex += hex(buf[i]) + " "
+    buf_hex = tohex(buf)
 
     print("buf " + str(id) + ":" + str(buf_hex))
     crc0, crc1 = CRC.compute(buf)
@@ -296,7 +309,7 @@ CRC:0xe0 0xb4
 # NFC TAG INTERFACE TEST HARNESS ----------------------------------------------
 
 def wait(msg):
-    print("\n" + str(msg))
+    raw_input("\n" + str(msg))
 
 
 def test_AN4433seq():
@@ -337,13 +350,14 @@ def test_AN4433seq():
 
     # read CC file length
     wait("read CC file len")
-    len = tag.readBinary(0x0000, 0x02, pcb=0x02)
-    print(str(len))
+    data = tag.readBinary(0x0000, 0x02, pcb=0x02)
+    print(tohex(data))
 
     # read CC file
     wait("read CC file")
     data = tag.readBinary(0x0000, 0x0F, pcb=0x03)
-    print(str(data))
+    print(data)
+    print(tohex(data))
 
     # select NDEF file
     wait("select NDEF file")
@@ -351,13 +365,20 @@ def test_AN4433seq():
 
     # read NDEF message length
     wait("read NDEF message len")
-    len = tag.readBinary(0x0000, 0x02, pcb=0x03)
-    print(str(len))
+    data = tag.readBinary(0x0000, 0x02, pcb=0x03)
+    print(tohex(data))
+    ndef_len = (data[1]*256) + data[2]
+    print("NDEF len:" + str(ndef_len))
 
     # read NDEF file
     wait("read NDEF message")
-    data = tag.readBinary(0x0002, 0x14, pcb=0x02)
-    print(str(data))
+    data = tag.readBinary(0x0002, ndef_len, pcb=0x02)
+    print(tohex(data))
+    ndef = data[6:-4]
+    s = ""
+    for i in range(len(ndef)):
+        s += chr(ndef[i])
+    print("ndef:" + s)
 
     # Deselect the tag and release the token (RF can now use it)
     wait("deselect")
