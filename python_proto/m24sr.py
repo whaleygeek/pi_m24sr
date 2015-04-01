@@ -2,8 +2,6 @@
 #
 # Driver wrapper around I2C to access the M24SR device
 
-#import ci2c as I2C
-
 # DOCUMENTATION
 #
 # DATA SHEETS (64-KBit EEPROM, NFC Type 4 and I2C interface)
@@ -39,6 +37,13 @@
 #   0011+1 Product code            0x84 or 0x8C
 
 
+def byte0(b):
+    return b & 0x00FF
+
+
+def byte1(b):
+    return (b & 0xFF00) >> 8
+
 
 class NFCTag():
     I2C_ADDRESS = 0xAC
@@ -51,20 +56,60 @@ class NFCTag():
         self.addr = self.I2C_ADDRESS
 
 
+    def write(self, data, crc=False):
+        # scaffolding while testing
+        # start, address+rw, stop handled by I2C
+
+        if crc:
+            crc0, crc1 = CRC.compute(data)
+            data.append(crc0)
+            data.append(crc1)
+
+        data_hex = ""
+        for i in range(len(data)):
+            data_hex += hex(data[i]) + " "
+
+        print("i2c write: [AC] " + data_hex)
+
+
+    def read(self, len, checkCrc=False):
+        # scaffolding while testing
+        # start, address+rw, stop handled by I2C
+        result = []
+        for i in range(len):
+            result.append(0xFE)
+        return result
+
+
     def killRFSelectI2C(self):
-        pass # TODO
+        # tx:  [0xAC]  0x52
+        # rx: TODO
+        self.write([0x52])
+        result = self.read(0)
 
 
     def selectFile(self, fileId):
-        pass # TODO
+        # tx:  [0xAC]  0x02    0x00    0xA4  0x00   0x0c   0x02   (0xE101)        0xCCCC
+        # rx: TODO
+        self.write([0x02, 0x00, 0xA4, 0x00, 0x0C, 0x02, byte0(fileId), byte1(fileId)], crc=True)
+        result = self.read(0)
 
 
     def readBinary(self, offset, length):
-        return 0x55AA # TODO
+        # read length
+        # tx: [0xAC]  0x03    0x00    0xB0  (0x00   0x00)                   (0x02) 0xCCCC
+        # rx: TODO
+        self.write([0x03, 0x00, 0xB0, byte0(offset), byte1(offset), byte0(length)], crc=True)
+        result = self.read(length)
+        return result
 
 
     def deselect(self):
-        pass # TODO
+        # deselect
+        # tx: [0xAC]  0xC2                                                     0xE0 B4
+        # rx: TODO
+        self.write([0xC2], crc=True)
+        result = self.read(0)
 
 
 
@@ -135,6 +180,8 @@ class CRC():
         return crc0, crc1
 
 
+# CRC VECTOR TEST HARNESS -----------------------------------------------------
+
 def test(id, buf):
     buf_hex = ""
     for i in range(len(buf)):
@@ -175,7 +222,7 @@ buf7_tx = [0x02,0x00,0xB0,0x00,0x02,0x14]
 buf8_tx = [0xC2]
 
 
-def main():
+def test_vectors():
   test("1tx", buf1_tx)
   test("1rx", buf1_rx)
   test("2tx", buf2_tx)
@@ -186,8 +233,6 @@ def main():
   test("7tx", buf7_tx)
   test("8tx", buf8_tx)
 
-
-main()
 
 """expected (C)
 buf 1tx:02 00 A4 04 00 07 D2 76 00 00 85 01 01 00
@@ -231,6 +276,45 @@ CRC:0xe0 0xb4
 
 """
 
+# NFC TAG INTERFACE TEST HARNESS ----------------------------------------------
+
+def wait(msg):
+    raw_input(msg)
+
+
+def test_bus():
+    wait("create tag object")
+    tag = NFCTag(None)
+
+    # READ MEMORY SIZE REGISTER FROM SYSTEM FILE
+
+    # kill off any RF session, and open an I2C session, claiming the token.
+    wait("select I2C")
+    tag.killRFSelectI2C()
+
+    # Select the SYSTEM INFO file
+    wait("select system file")
+    tag.selectFile(tag.SYSTEM)
+
+    # Read the length of the SYSTEM file (should be 0x0012)
+    wait("read system file length")
+    len = tag.readBinary(0x00, 0x02)
+    print("len:" + str(len))
+
+    # Read the memory size field in the SYSTEM file (shoudl be 0x1FFF eeprom size)
+    wait("read eeprom size from system file")
+    memsize = tag.readBinary(0x000F, 0x02)
+    print("memsize:" + str(memsize))
+
+    # Deselect the tag and release the token (RF can now use it)
+    wait("deselect")
+    tag.deselect()
+
+
+if __name__ == "__main__":
+    #test_vectors()
+    while True:
+        test_bus()
 
 # END
 
