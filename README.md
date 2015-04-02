@@ -1,12 +1,27 @@
 A Raspberry Pi based interface to the M24SR Dynamic NFC tag
 ====
 
-This is a placeholder for some code that I am writing.
+This project is a dumping ground for some (in progress) code I am writing
+for the ST Microelectronics M24SR Dynamic NFC Tag.
 
-This code will run on a Raspberry pi, and interface via I2C to a ST Microelectronics M24SR Dynamic NFC tag.
+Prototypes and hardware test code for both RaspberryPi and Arduino
+can be found here. They are in no way "neat" programs at the moment,
+they are mainly just to excercise some test hardware and test that
+NDEF URI's can be read-back from a dynamic tag.
 
-These tags are great, you can write NDEF records to them, and then placing a modern smartphone on top will
-redirect the phone to various destinations, such as URI's, phone numbers, etc.
+On the Arduino Uno, just plug the X-NUCLEO-NFC01A1 evaluation board into
+the socket, load the code, then wire up a serial terminal to see the
+responses. My tag has a URI programmed into it, that was set by some
+initial testing I did with some mbed code on a ST NUCLEO board at
+a workshop.
+
+
+Dynamic NFC Tags
+----
+
+These tags are great, you can write NDEF records to them, and then placing a modern 
+smartphone on top will redirect the phone to various destinations, such as URI's, 
+phone numbers, etc.
 
 It is possible to program the records from within a smartphone app.
 
@@ -67,6 +82,13 @@ For a 7 bit address, use 0x56 and let the library add the R/W bit for you.
 
 Useful sequences
 ----
+
+These are better explained in the NDEF.ino file for the Arduino.
+Most of these sequences can just be captured and send with no
+modification. The ReadNDEFMessageLen is required to get the length of the
+NDEF message, and you then have to adjust both the length byte and the CRC
+inside ReadNDEFMessage for the device to respond correctly.
+
 
 kill RF, select I2C: AC 52
 
