@@ -74,7 +74,7 @@ Some I2C libraries take a 7 bit address, some take 8. The 7 bit
 libraries shift the address you provide it left by one and append
 the R/W bit.
 
-For an 8 bit address, uxe 0xAC for write, 0xAD for read.
+For an 8 bit address, use 0xAC for write, 0xAD for read.
 
 For a 7 bit address, use 0x56 and let the library add the R/W bit for you.
 
@@ -104,7 +104,7 @@ select NDEF file: AC 02 00 A4 00 0C 02 00 01 3E FD
 
 read NDEF message len: AC 03 00 B0 00 00 02 40 79
 
-read NDEF message: AC 02 00 0B 00 02 0C A5 A7
+read NDEF message: AC 02 00 B0 00 02 0C A5 A7
 
 deselect: AC C2 E0 B4
 
