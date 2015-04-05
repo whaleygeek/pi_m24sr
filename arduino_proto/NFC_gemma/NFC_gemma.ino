@@ -31,7 +31,8 @@
 // LED is used to put a capture region around the NDEF read, so that
 // a scope or logic analyser can easily find the frames of interest
 // by triggering on rising-high of that pin.
-#define CAPTURE LED
+#define CAPTURE  LED
+#define USER     LED
 
 #define NFC_ADDR_7BIT 0x56
 
@@ -55,14 +56,6 @@ byte readNDEFMsg[]    = {0x02,0x00,0xB0,0x00,0x02,0x0C,0xA5,0xA7};
 byte deselectI2C[]    = {0xC2,0xE0,0xB4};
 
 // The delays are required, to allow the M24SR time to process commands.
-
-//void loop()
-//{
-//  digitalWrite(CAPTURE, HIGH);
-//  delay(250);
-//  digitalWrite(CAPTURE, LOW);
-//  delay(250);
-//}
 
 void loop()
 {
@@ -161,21 +154,27 @@ void loop()
 #define PROTO_OVERHEAD 5
 // 5 bytes for NDEF header (in URI format)
 #define HEADER_LEN 5
+//2 chars for the language of a TEXT record ('en')
+#define LANGUAGE_LEN 2
 
-  int msgStart = 1 + HEADER_LEN;
-  int msgEnd   = 1 + HEADER_LEN + (len-HEADER_LEN);
+  // Indexes into the I2C response message of start and end of user data (for TEXT)
+  // PCB(1)+HEADER(5)+data+SW1(1)_SW2(1)+CRCH(1)+CRCL(1)
+  int msgStart = 1 + HEADER_LEN + LANGUAGE_LEN;
+  int msgEnd   = 1 + HEADER_LEN + LANGUAGE_LEN + (len-msgStart);
   
   Wire.requestFrom(NFC_ADDR_7BIT, len+PROTO_OVERHEAD);
   idx = 0;
+  startMsg();
   while (Wire.available())
   {
     byte b = Wire.read();
     if (idx >= msgStart && idx <= msgEnd)
     {
-  //    //Serial.write(b); //TODO process this character
+      processMsg(b);
     }
     idx++;
   }
+  endMsg();
   //Serial.println();  
   //readAndDisplay(len+PROTO_OVERHEAD);
   
@@ -188,9 +187,11 @@ void loop()
   Wire.write(deselectI2C, sizeof(deselectI2C));
   Wire.endTransmission();
   delay(1);
-  //readAndDisplay(3);  
+  //readAndDisplay(3); 
+ 
+  runMsg(); 
   
-  delay(1000);
+  delay(1000); // for debugging, separate into phases of read/process/wait
 }
 
 
@@ -235,6 +236,81 @@ word ComputeCrc(byte *data, unsigned int len, byte *crc0, byte *crc1)
   *crc0 = (byte) (wCrc & 0xFF);
   *crc1 = (byte) ((wCrc >> 8) & 0xFF);
   return wCrc;
+}
+
+
+/* This is an example of how to extract an NDEF text message.
+ * The code calls startMsg() when it thinks it is receiving a message. 
+ * This is the point to clear any buffers or reset any index counters.
+ * Then it calls processMsg() for every byte received. You should
+ * process the byte then increment your indexes.
+ * Finally it calls endMsg() when finished.
+ * You should now tidy anything up such as terminate buffers.
+ * calling runMsg() should playback the sequence.
+ */
+ 
+/* This example stores delay lengths in a buffer. Odd indexes are the ON time in ms,
+ * event indexes are the OFF time in ms. 0 marks the end of the buffer.
+ * ASCII encoding is as follows:
+ * '0' => don't use
+ * '1' => 100ms
+ * '2' => 200ms
+ * ...
+ * '9' => 900ms
+ *
+ * You can just about flash morse code using this.
+ */
+ 
+#define MSG_MAX 32
+int msgIdx;
+char msg[MSG_MAX+1];
+
+void startMsg()
+{
+  msgIdx = 0;
+}
+
+void processMsg(byte b)
+{
+  char ch = (char) b;
+  if (msgIdx<MSG_MAX)
+  {
+    msg[msgIdx++] = ch;
+  }
+}
+
+void endMsg()
+{
+  msg[msgIdx] = 0; /* Make sure buffer is terminated */
+}
+
+void runMsg()
+{
+  for (int i=0; i<MSG_MAX; i++)
+  {
+    char ch = msg[i];
+    if (ch == 0)
+    {
+      break; /* early terminated message */
+    }
+    if (ch < '1' || ch > '9')
+    {
+      ch = '1';
+    }
+    
+    int time =  ((int)(ch - '0')) * 100;
+    if ((i & 0x01) == 0) // odd message, turn LED on
+    {
+      digitalWrite(USER, HIGH);
+    }
+    else // even message, turn LED off
+    {
+      digitalWrite(USER, LOW);
+    }
+    delay(time);
+  }
+  // Always leave LED off at end
+  digitalWrite(USER, LOW);
 }
 
 /* END OF FILE */
