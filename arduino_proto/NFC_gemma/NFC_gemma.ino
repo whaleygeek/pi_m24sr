@@ -64,133 +64,132 @@ byte deselectI2C[]    = {0xC2,0xE0,0xB4};
 //  delay(250);
 //}
 
-void loop(){
+void loop()
+{
   //Serial.println("\nstarting");
   //digitalWrite(LED1, HIGH);
 
   // kill RF, select I2C
   //Serial.println("selectI2C");
-  digitalWrite(CAPTURE, HIGH);
   Wire.beginTransmission(NFC_ADDR_7BIT);
   Wire.write(selectI2C, sizeof(selectI2C));
   Wire.endTransmission();
-  digitalWrite(CAPTURE, LOW);
   delay(1);
   
   //select NFC app
   //Serial.println("selectNFCApp");
-  //Wire.beginTransmission(NFC_ADDR_7BIT);
-  //Wire.write(selectNFCApp, sizeof(selectNFCApp));
-  //Wire.endTransmission();
-  //delay(1);
+  Wire.beginTransmission(NFC_ADDR_7BIT);
+  Wire.write(selectNFCApp, sizeof(selectNFCApp));
+  Wire.endTransmission();
+  delay(1);
   //readAndDisplay(5);
   
   
   //select CC file
   //Serial.println("selectCCFile");
-  //Wire.beginTransmission(NFC_ADDR_7BIT);
-  //Wire.write(selectCCFile, sizeof(selectCCFile));
-  //Wire.endTransmission();
-  //delay(1);
+  Wire.beginTransmission(NFC_ADDR_7BIT);
+  Wire.write(selectCCFile, sizeof(selectCCFile));
+  Wire.endTransmission();
+  delay(1);
   //readAndDisplay(5);
 
   //readCCLen
   //Serial.println("readCCLen");
-  //Wire.beginTransmission(NFC_ADDR_7BIT);
-  //Wire.write(readCCLen, sizeof(readCCLen));
-  //Wire.endTransmission();
-  //delay(1);
+  Wire.beginTransmission(NFC_ADDR_7BIT);
+  Wire.write(readCCLen, sizeof(readCCLen));
+  Wire.endTransmission();
+  delay(1);
   //readAndDisplay(7);
 
-  //int len=20; //TODO get from above payload, not overly critical
+  int len=20; //TODO get from above payload, not overly critical
 
   //readCCFile
   //Serial.println("readCCFile");
-  //Wire.beginTransmission(NFC_ADDR_7BIT);
-  //Wire.write(readCCFile, sizeof(readCCFile));
-  //Wire.endTransmission();
-  //delay(1);
+  Wire.beginTransmission(NFC_ADDR_7BIT);
+  Wire.write(readCCFile, sizeof(readCCFile));
+  Wire.endTransmission();
+  delay(1);
   //readAndDisplay(len);
   
   
   //selectNDEFFile
   //Serial.println("selectNDEFFile");
-  //Wire.beginTransmission(NFC_ADDR_7BIT);
-  //Wire.write(selectNDEFFile, sizeof(selectNDEFFile));
-  //Wire.endTransmission();
-  //delay(1);
+  Wire.beginTransmission(NFC_ADDR_7BIT);
+  Wire.write(selectNDEFFile, sizeof(selectNDEFFile));
+  Wire.endTransmission();
+  delay(1);
   //readAndDisplay(5);
   
   
   //readNDEFLen
   //Serial.println("readNDEFLen");
   //digitalWrite(CAPTURE, HIGH); // so we can capture on logic analyser
-  //Wire.beginTransmission(NFC_ADDR_7BIT);
-  //Wire.write(readNDEFLen, sizeof(readNDEFLen));
-  //Wire.endTransmission();
-  //delay(1);
+  Wire.beginTransmission(NFC_ADDR_7BIT);
+  Wire.write(readNDEFLen, sizeof(readNDEFLen));
+  Wire.endTransmission();
+  delay(1);
   
-  //Wire.requestFrom(NFC_ADDR_7BIT, 7);
-  //int idx = 0;
-  //while (Wire.available())
-  //{
-  //  byte b = Wire.read();
-  //  //Serial.print(b, HEX);
-  //  //Serial.write(' ');
-  //  if (idx == 2) // TODO max len is 255?
-  //  {
-  //    len = b;
-  //  }
-  //  idx++;
-  //}
+  Wire.requestFrom(NFC_ADDR_7BIT, 7);
+  int idx = 0;
+  while (Wire.available())
+  {
+    byte b = Wire.read();
+    //Serial.print(b, HEX);
+    //Serial.write(' ');
+    if (idx == 2) // TODO max len is 255?
+    {
+      len = b;
+    }
+    idx++;
+  }
   //Serial.println();
 
 
   //readNDEFMsg
   //len = full NDEF length, (5 byte prefix+actual URI)
   //Serial.println("readNDEFMsg");
-  //Wire.beginTransmission(NFC_ADDR_7BIT);
+  digitalWrite(CAPTURE, HIGH);  
+  Wire.beginTransmission(NFC_ADDR_7BIT);
   // Patch in the length and fix the broken CRC
-  //readNDEFMsg[5] = len; // this is the len returned from ReadNDEFLen
-  //ComputeCrc(readNDEFMsg, sizeof(readNDEFMsg)-2, &(readNDEFMsg[6]), &(readNDEFMsg[7]));
-  //Wire.write(readNDEFMsg, sizeof(readNDEFMsg));
-  //Wire.endTransmission();
-  //delay(1);
+  readNDEFMsg[5] = len; // this is the len returned from ReadNDEFLen
+  ComputeCrc(readNDEFMsg, sizeof(readNDEFMsg)-2, &(readNDEFMsg[6]), &(readNDEFMsg[7]));
+  Wire.write(readNDEFMsg, sizeof(readNDEFMsg));
+  Wire.endTransmission();
+  delay(1);
 
 // (PCB,SW1,SW2,CRC0,CRC1)
-//#define PROTO_OVERHEAD 5
+#define PROTO_OVERHEAD 5
 // 5 bytes for NDEF header (in URI format)
-//#define HEADER_LEN 5
+#define HEADER_LEN 5
 
-  //int msgStart = 1 + HEADER_LEN;
-  //int msgEnd   = 1 + HEADER_LEN + (len-HEADER_LEN);
+  int msgStart = 1 + HEADER_LEN;
+  int msgEnd   = 1 + HEADER_LEN + (len-HEADER_LEN);
   
-  //Wire.requestFrom(NFC_ADDR_7BIT, len+PROTO_OVERHEAD);
-  //idx = 0;
-  //while (Wire.available())
-  //{
-  //  byte b = Wire.read();
-  //  if (idx >= msgStart && idx <= msgEnd)
-  //  {
-  //    //Serial.write(b);
-  //  }
-  //  idx++;
-  //}
+  Wire.requestFrom(NFC_ADDR_7BIT, len+PROTO_OVERHEAD);
+  idx = 0;
+  while (Wire.available())
+  {
+    byte b = Wire.read();
+    if (idx >= msgStart && idx <= msgEnd)
+    {
+  //    //Serial.write(b); //TODO process this character
+    }
+    idx++;
+  }
   //Serial.println();  
   //readAndDisplay(len+PROTO_OVERHEAD);
   
-  //digitalWrite(CAPTURE, LOW); // marks end of capture region for logic analyser
+  digitalWrite(CAPTURE, LOW); // marks end of capture region for logic analyser
 
 
   //deselectI2C
   //Serial.println("deselectI2C");
-  //Wire.beginTransmission(NFC_ADDR_7BIT);
-  //Wire.write(deselectI2C, sizeof(deselectI2C));
-  //Wire.endTransmission();
-  //delay(1);
+  Wire.beginTransmission(NFC_ADDR_7BIT);
+  Wire.write(deselectI2C, sizeof(deselectI2C));
+  Wire.endTransmission();
+  delay(1);
   //readAndDisplay(3);  
   
-  digitalWrite(CAPTURE, LOW);
   delay(1000);
 }
 
