@@ -155,6 +155,29 @@ probably get away with hard coding the CRC, but the one that will vary is the
 will change the CRC for that frame.
 
 
+Gemma
+----
+
+This now works on the Gemma. You can load in LED flash patterns over the NFC TEXT
+record (ASCII '1'..'9' sets delay time in 100ms increments, the LED toggles
+alternate ON and OFF using those flash times).
+
+Use project arduino_proto/NFC_gemma
+
+Note however you need to hack the TinyWireM library to extend the buffer size for
+longer messages, there is a (1+5+2+4)=12 byte protocol overhead for the NFC
+data record, so you need at least 12 bytes plus your longest NFC TEXT string
+to prevent corruptions occuring inside the TinyWireM I2C driver:
+
+//#define USI_BUF_SIZE    18              // bytes in message buffer
+
+#define USI_BUF_SIZE     128
+
+GetTinyWireM from here:
+
+https://github.com/adafruit/TinyWireM
+
+
 
 
 
