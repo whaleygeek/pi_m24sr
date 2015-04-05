@@ -1,4 +1,4 @@
-/* NFC.ino  02/04/2015  D.J.Whale
+/* NFC_gema.ino  02/04/2015  D.J.Whale
  *
  * Please note: This program is a hardware test program only.
  * It was written under extreme time pressure, and should only
@@ -7,14 +7,16 @@
  * in any way a representation of good programming practice...
  * ... that takes more than a couple of hours to achieve.
  *
- * Test program for Arduino Uno to read a URI NDEF record from M24SR.
+ * Test program for Adafruit Gemma to read a URI NDEF record from M24SR.
  * Wire up a X-NUCLEO-NFC01A1 to the SCL/SCA pins.
  * Download this program and run it.
- * On the serial monitor, you should see a series of trace messages
- * for each step, plus the URL near the end that is read back from the
- * NDEF record.
+ * 
  * If you get loads of 00 or FF data back, you probably don't have
  * 4.7K pullup resistors on both of SCL and SDA.
+ *
+ * D2 SCL
+ * D0 SDA
+ * D1 LED
  */
  
 //Modified for testing on Gemma.
@@ -22,11 +24,6 @@
 //#include <Wire.h>
 #include <TinyWireM.h>
 #define Wire TinyWireM
-
-// LEDs on X-NUCLEO board
-//#define LED1 5
-//#define LED2 4
-//#define LED3 2
 
 // LEDs on Gemma
 #define LED 1
@@ -59,8 +56,15 @@ byte deselectI2C[]    = {0xC2,0xE0,0xB4};
 
 // The delays are required, to allow the M24SR time to process commands.
 
-void loop()
-{
+//void loop()
+//{
+//  digitalWrite(CAPTURE, HIGH);
+//  delay(250);
+//  digitalWrite(CAPTURE, LOW);
+//  delay(250);
+//}
+
+void loop(){
   //Serial.println("\nstarting");
   //digitalWrite(LED1, HIGH);
 
@@ -186,8 +190,8 @@ void loop()
   //delay(1);
   //readAndDisplay(3);  
   
-  //digitalWrite(LED1, LOW);
-  //delay(1000);
+  digitalWrite(CAPTURE, LOW);
+  delay(1000);
 }
 
 
